@@ -5,6 +5,7 @@ import config
 import torch
 
 def load_model():
+    """Loads the language model and tokenizer."""
     print("Loading model...")
     tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
     model = AutoModelForCausalLM.from_pretrained(config.MODEL_NAME)
