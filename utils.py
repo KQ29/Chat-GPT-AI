@@ -5,11 +5,12 @@ import os
 
 def log_session(user_input, response):
     """Logs each interaction to a session log file."""
-    with open(config.SESSION_LOG_PATH, "a") as log_file:
+    with open(config.SESSION_LOG_PATH, "a", encoding="utf-8") as log_file:
         log_file.write(f"You: {user_input}\n")
         log_file.write(f"Co-Pilot: {response}\n\n")
 
 def handle_command_shortcuts(user_input):
+    """Handles specific commands for assistance or session control."""
     user_input_lower = user_input.lower().strip()
     if user_input_lower in ["exit", "quit", "bye"]:
         return "exit"
@@ -23,8 +24,8 @@ def handle_command_shortcuts(user_input):
         )
     elif user_input_lower in ["/clear", "clear"]:
         # Clear the session log file
-        with open(config.SESSION_LOG_PATH, "w") as log_file:
-            log_file.write("")
+        with open(config.SESSION_LOG_PATH, "w", encoding="utf-8") as log_file:
+            log_file.write("")  # Clears log contents
         return "Session log cleared."
     elif user_input_lower in ["/reset", "reset"]:
         # Reset conversation history
