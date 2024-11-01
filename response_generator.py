@@ -2,52 +2,63 @@
 
 import torch
 import re
-import numexpr as ne
+from sympy import sympify, Symbol, sin, cos, tan, pi, E, exp, sqrt, log
+from sympy.core.sympify import SympifyError
 
 def is_math_expression(text):
+    """Determines if the input text is a mathematical expression."""
     text = text.rstrip('?.! ')
-    # Расширенный паттерн для распознавания математических выражений
-    pattern = r'^[\d\s\+\-\*/\%\.\(\)eE]+$'
+    # Allow letters, digits, and common math symbols
+    pattern = r'^[\d\s\w\+\-\*/%\.\^\(\),]+$'
     return bool(re.match(pattern, text))
 
 def preprocess_expression(expression):
+    """Preprocesses the mathematical expression for evaluation."""
     expression = expression.lower()
-    expression = expression.replace('^', '**')  # Замена возведения в степень
+    # Replace English words with mathematical operators
+    expression = expression.replace('^', '**')  # Exponentiation
+    expression = expression.replace('of', '*')  # For phrases like '10% of 200'
+    expression = expression.replace('%', '/100')  # Percentages
+    # Remove spaces
     expression = expression.replace(' ', '')
     return expression
 
 def evaluate_math_expression(expression):
+    """Evaluates the mathematical expression safely using sympy."""
     try:
         expression = preprocess_expression(expression)
-        # Безопасное вычисление математического выражения с помощью numexpr
-        result = ne.evaluate(expression)
+        # Safely evaluate the expression
+        result = sympify(expression).evalf()
         return str(result)
-    except Exception:
-        return "Извините, не удалось вычислить выражение."
+    except SympifyError:
+        return "I'm sorry, I couldn't evaluate that expression."
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
 
 def generate_response(model, tokenizer, device, user_input, chat_history_ids=None):
-    # Установка pad_token_id
+    """Generates a response from the model based on user input."""
+    # Ensure pad_token_id is defined and different from eos_token_id
     if tokenizer.pad_token is None:
         tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-        model.resize_token_embeddings(len(tokenizer))
+        model.resize_token_embeddings(len(tokenizer), resize_token_embeddings=True)
     model.config.pad_token_id = tokenizer.pad_token_id
 
     stripped_input = user_input.rstrip('?.! ')
 
-    # Проверка на математическое выражение
+    # Check if the user input is a math expression
     if is_math_expression(stripped_input):
         response_text = evaluate_math_expression(stripped_input)
         return response_text, chat_history_ids
 
-    # Обработка фраз типа "сколько будет 4 + 4"
-    match = re.search(r'(?:сколько|что|чему)\s+(?:будет|равно)\s+(.+)', user_input.lower())
+    # Extract expressions from phrases like "what is 4 + 4"
+    match = re.search(r'(?:what|how much|calculate)\s+(?:is|will be)\s+(.+)', user_input.lower())
     if match:
         expression = match.group(1)
         if is_math_expression(expression):
             response_text = evaluate_math_expression(expression)
             return response_text, chat_history_ids
 
-    # Генерация ответа с помощью модели
+    # Proceed with generating a response using the model
     new_user_input_ids = tokenizer.encode(
         user_input + tokenizer.eos_token, return_tensors='pt'
     ).to(device)
