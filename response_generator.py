@@ -2,7 +2,7 @@
 
 import torch
 import re
-from sympy import sympify, Symbol, sin, cos, tan, pi, E, exp, sqrt, log
+from sympy import sympify, sin, cos, tan, pi, E, exp, sqrt, log
 from sympy.core.sympify import SympifyError
 
 def is_math_expression(text):
@@ -40,7 +40,7 @@ def generate_response(model, tokenizer, device, user_input, chat_history_ids=Non
     # Ensure pad_token_id is defined and different from eos_token_id
     if tokenizer.pad_token is None:
         tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-        model.resize_token_embeddings(len(tokenizer), resize_token_embeddings=True)
+        model.resize_token_embeddings(len(tokenizer))  # Corrected line
     model.config.pad_token_id = tokenizer.pad_token_id
 
     stripped_input = user_input.rstrip('?.! ')
