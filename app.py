@@ -6,40 +6,40 @@ from utils import log_session, handle_command_shortcuts, ensure_log_directory_ex
 import warnings
 import os
 
-# Подавление предупреждений
+# Suppress warnings
 warnings.filterwarnings("ignore")
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def main():
-    print("Co-Pilot: Привет! Я ваш локальный ассистент по программированию. Введите '/help' для списка команд или 'exit' для выхода.")
+    print("Co-Pilot: Hi! I'm your local coding assistant. Type '/help' for commands or 'exit' to quit.")
     ensure_log_directory_exists()
     model, tokenizer, device = load_model()
     chat_history_ids = None
 
     while True:
-        user_input = input("Вы: ")
+        user_input = input("You: ")
 
-        # Обработка команд
+        # Handle command shortcuts
         command_response = handle_command_shortcuts(user_input)
         if command_response:
             if command_response == "exit":
-                print("Co-Pilot: До свидания! Удачного кодинга!")
+                print("Co-Pilot: Goodbye! Happy coding!")
                 break
             elif command_response == "reset":
                 chat_history_ids = None
-                print("Co-Pilot: История общения сброшена.")
+                print("Co-Pilot: Conversation history has been reset.")
                 continue
             else:
                 print("Co-Pilot:", command_response)
                 continue
 
-        # Генерация и вывод ответа
+        # Generate and display response
         response_text, chat_history_ids = generate_response(
             model, tokenizer, device, user_input, chat_history_ids
         )
         print("Co-Pilot:", response_text)
 
-        # Логирование сессии
+        # Log conversation to file
         log_session(user_input, response_text)
 
 if __name__ == "__main__":
