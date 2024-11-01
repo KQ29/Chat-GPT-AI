@@ -1,0 +1,11 @@
+# Ignore Virtual Environment
+myenv
+
+# Ignore config.py
+config.py
+
+# Ignore __pycache__
+__pycache__
+
+# Ignore logs
+logs/
