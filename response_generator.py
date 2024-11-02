@@ -2,15 +2,23 @@
 
 import torch
 import re
-from sympy import sympify, sin, cos, tan, pi, E, exp, sqrt, log
-from sympy.core.sympify import SympifyError
+from sympy import sympify, SympifyError
+from sympy import sin, cos, tan, pi, E, exp, sqrt, log
 
 def is_math_expression(text):
     """Determines if the input text is a mathematical expression."""
-    text = text.rstrip('?.! ')
-    # Allow letters, digits, and common math symbols
-    pattern = r'^[\d\s\w\+\-\*/%\.\^\(\),]+$'
-    return bool(re.match(pattern, text))
+    try:
+        expression = preprocess_expression(text)
+        expr = sympify(expression)
+        # If the expression has free symbols (undefined variables), it's likely not purely mathematical
+        if expr.free_symbols:
+            return False
+        else:
+            return True
+    except SympifyError:
+        return False
+    except Exception:
+        return False
 
 def preprocess_expression(expression):
     """Preprocesses the mathematical expression for evaluation."""
@@ -27,20 +35,22 @@ def evaluate_math_expression(expression):
     """Evaluates the mathematical expression safely using sympy."""
     try:
         expression = preprocess_expression(expression)
-        # Safely evaluate the expression
-        result = sympify(expression).evalf()
+        expr = sympify(expression)
+        if expr.free_symbols:
+            return "I'm sorry, I couldn't evaluate that expression."
+        result = expr.evalf()
         return str(result)
     except SympifyError:
         return "I'm sorry, I couldn't evaluate that expression."
-    except Exception as e:
-        return f"An error occurred: {str(e)}"
+    except Exception:
+        return "An error occurred while evaluating the expression."
 
 def generate_response(model, tokenizer, device, user_input, chat_history_ids=None):
     """Generates a response from the model based on user input."""
     # Ensure pad_token_id is defined and different from eos_token_id
     if tokenizer.pad_token is None:
         tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-        model.resize_token_embeddings(len(tokenizer))  # Corrected line
+        model.resize_token_embeddings(len(tokenizer))
     model.config.pad_token_id = tokenizer.pad_token_id
 
     stripped_input = user_input.rstrip('?.! ')
