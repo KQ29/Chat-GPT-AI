@@ -1,6 +1,7 @@
 # response_generator.py
 
 import re
+import random
 from sympy import sympify, SympifyError
 from model_loader import query_huggingface_api
 import config
@@ -10,7 +11,7 @@ def is_math_expression(text):
     Determines if the input text is a mathematical expression.
     Returns True if it is, False otherwise.
     """
-    math_keywords = ['calculate', 'compute', 'evaluate', 'solve', 'what is', 'what\'s', 'find']
+    math_keywords = ['calculate', 'compute', 'evaluate', 'solve', 'what is', "what's", 'find']
 
     # Exclude inputs ending with a question mark to prevent misclassification
     if text.strip().endswith('?'):
@@ -51,7 +52,7 @@ def preprocess_expression(expression):
 def evaluate_math_expression(expression):
     """
     Evaluates the mathematical expression safely using sympy.
-    Returns the result as a string.
+    Returns the result as a conversational string.
     """
     try:
         expression = preprocess_expression(expression)
@@ -68,7 +69,26 @@ def evaluate_math_expression(expression):
         else:
             result = float(result)
 
-        return str(result)
+        # Prepare a list of conversational phrases to use in the response
+        phrases = [
+            "It'll be {}.",
+            "The answer is {}.",
+            "That equals {}.",
+            "It's definitely {}.",
+            "The result is {}.",
+            "Calculating... it's {}.",
+            "Sure thing! It's {}.",
+            "After crunching the numbers, I got {}.",
+            "No doubt, it's {}.",
+            "You bet, the answer is {}."
+        ]
+
+        # Randomly select a phrase
+        response_template = random.choice(phrases)
+        # Format the response with the result
+        response = response_template.format(result)
+
+        return response
     except SympifyError:
         return "I'm sorry, I couldn't evaluate that expression."
     except Exception:
@@ -84,30 +104,30 @@ def handle_math_expression(user_input, chat_history=None):
 
 def generate_response(user_input, chat_history=None, use_api=True):
     """
-    Generates a response using the Hugging Face Inference API if available.
-    If the API isn't accessible, switches to calculator functionality.
-    Returns the response text and updated chat history.
+    Generates a response by first checking if the input is a mathematical expression.
+    If it is, evaluates it using the calculator with a conversational response.
+    Otherwise, generates a response using the Hugging Face Inference API.
     """
     stripped_input = user_input.strip()
 
-    if use_api:
-        # Use the Hugging Face Inference API to generate a response
-        payload = {
-            "inputs": stripped_input,
-            "parameters": {
-                "max_length": config.MAX_LENGTH,
-                "temperature": 0.7,
-                "top_k": 50,
-                "top_p": 0.95,
-                "no_repeat_ngram_size": 3
-            }
-        }
-        response_text = query_huggingface_api(payload)
-        return response_text, chat_history
+    # Check if the input is a mathematical expression
+    if is_math_expression(stripped_input):
+        result = evaluate_math_expression(stripped_input)
+        return result, chat_history
     else:
-        # Calculator functionality
-        if is_math_expression(stripped_input):
-            result = evaluate_math_expression(stripped_input)
-            return result, chat_history
+        # Use the Hugging Face Inference API to generate a response
+        if use_api:
+            payload = {
+                "inputs": stripped_input,
+                "parameters": {
+                    "max_length": config.MAX_LENGTH,
+                    "temperature": 0.7,
+                    "top_k": 50,
+                    "top_p": 0.95,
+                    "no_repeat_ngram_size": 3
+                }
+            }
+            response_text = query_huggingface_api(payload)
+            return response_text, chat_history
         else:
             return "I'm sorry, I can only help with mathematical calculations. Please enter a math problem.", chat_history
